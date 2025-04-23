@@ -1,8 +1,7 @@
 streamlit
 pandas
 openpyxl
+brazilcep
 photon
 urllib3
 requests
-pycep-correios
-
