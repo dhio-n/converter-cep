@@ -51,7 +51,7 @@ def process_ceps(file):
     for cep in ceps_formatados:
         endereco_completo = buscar_endereco_brasil_cep(cep)
         enderecos[cep] = endereco_completo
-        st.markdown(f"✅ **{cep}** → `{endereco_completo}`")
+        # st.markdown(f"✅ **{cep}** → `{endereco_completo}`")
         
    
 
