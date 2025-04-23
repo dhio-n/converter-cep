@@ -17,23 +17,26 @@ def buscar_endereco_google(endereco):
             return location["lat"], location["lng"]
     return None, None
 
-# Função que tenta buscar as coordenadas usando brazilcep e, se necessário, a API do Google
-def buscar_lat_lng(cep):
+# Função para buscar o endereço usando o brazilcep
+def buscar_endereco_brazilcep(cep):
     try:
         endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
         if endereco is None:
-            raise ValueError("CEP não encontrado na primeira tentativa")
+            raise ValueError("CEP não encontrado")
         
         # Extraindo o endereço completo fornecido pelo brazilcep
-        endereco_completo = endereco.get("logradouro", "") + ", " + endereco.get("bairro", "") + ", " + endereco.get("cidade", "") + ", " + endereco.get("uf", "")
-        
+        endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('cidade', '')}, {endereco.get('uf', '')}, Brazil"
+        return endereco_completo
+    except Exception as e:
+        return None
+
+# Função para buscar a latitude e longitude do CEP, passando pela API do Google após obter o endereço
+def buscar_lat_lng(cep):
+    endereco_completo = buscar_endereco_brazilcep(cep)
+    if endereco_completo:
         # Buscando a latitude e longitude do endereço completo via API do Google
         latitude, longitude = buscar_endereco_google(endereco_completo)
-        
-        if latitude and longitude:
-            return latitude, longitude
-    except Exception as e:
-        pass
+        return latitude, longitude
     return None, None
 
 # Função para processar o arquivo e adicionar as coordenadas
