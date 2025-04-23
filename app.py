@@ -22,13 +22,13 @@ def buscar_lat_lon_google(cep, api_key):
             lat = data['results'][0]['geometry']['location']['lat']
             lon = data['results'][0]['geometry']['location']['lng']
 
-            # Imprime o CEP e as coordenadas no console
-            print(f"CEP: {cep}, Latitude: {lat}, Longitude: {lon}")
+            # Exibe o CEP e as coordenadas na tela
+            st.write(f"CEP: {cep}, Latitude: {lat}, Longitude: {lon}")
 
             return lat, lon
         else:
-            # Imprime o status da API se houver um erro
-            print(f"Erro na API para o CEP {cep}: {data['status']}")
+            # Exibe o status da API se houver um erro
+            st.write(f"Erro na API para o CEP {cep}: {data['status']}")
             return None, None
     except Exception as e:
         # Captura qualquer exceção e exibe erro no Streamlit
