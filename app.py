@@ -22,7 +22,7 @@ def buscar_endereco_google(endereco_completo):
 def buscar_endereco_brasil_cep(cep):
     # Utiliza o BrasilCEP apenas para obter o endereço completo
     try:
-        endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
+        endereco = get_address_from_cep(cep)
         if endereco:
             endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
             return endereco_completo
