@@ -23,8 +23,8 @@ def buscar_endereco_brasil_cep(cep):
     # Utiliza o BrasilCEP apenas para obter o endereço completo
     try:
         endereco = get_address_from_cep(cep)
-        if endereco:
-           endereco_completo = f"{endereco.get('street', '')}, {endereco.get('district', '')}, {endereco.get('city', '')}, {endereco.get('uf', '')}"
+            if endereco:
+               endereco_completo = f"{endereco.get('street', '')}, {endereco.get('district', '')}, {endereco.get('city', '')}, {endereco.get('uf', '')}"
 
             return endereco_completo
     except Exception as e:
