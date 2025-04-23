@@ -8,6 +8,7 @@ GOOGLE_API_KEY = st.secrets["google_api_key"]
 
 @st.cache_data
 def buscar_lat_lon_google(cep, api_key):
+    time.sleep(0.5) # Add a delay before calling the API
     try:
         # Monta a URL para consulta na API do Google Geocoding
         url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={api_key}"
@@ -59,7 +60,6 @@ if arquivo:
         for cep in ceps_unicos:
             lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
             coord_dict[cep] = (lat, lon)
-            time.sleep(1.1)  # Evita atingir o limite de requisições da API
 
         # Aplica as coordenadas no DataFrame original
         df['latitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[0])
