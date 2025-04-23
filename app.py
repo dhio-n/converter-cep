@@ -41,25 +41,28 @@ def process_ceps(file):
     ceps = df["CEP"].astype(str)
     latitudes = []
     longitudes = []
-    enderecos = []
+    enderecos = {}
 
+    # Criar um dicionário de endereços
     for cep in ceps:
-        lat, lng = buscar_lat_lng(cep)
-        # Buscar endereço completo usando CEPBRASIL
         try:
             endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
             endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
+            enderecos[cep] = endereco_completo
         except:
-            endereco_completo = "Endereço não encontrado"
-        
+            enderecos[cep] = "Endereço não encontrado"
+
+    # Agora vamos processar as latitudes e longitudes
+    for cep in ceps:
+        lat, lng = buscar_lat_lng(cep)
         # Garantir que a latitude e longitude tenham 6 casas decimais
         latitudes.append(round(lat, 6) if lat is not None else None)
         longitudes.append(round(lng, 6) if lng is not None else None)
-        enderecos.append(endereco_completo)
 
+    # Adicionar as colunas de Latitude, Longitude e Endereço ao DataFrame
     df["Latitude"] = latitudes
     df["Longitude"] = longitudes
-    df["Endereço"] = enderecos
+    df["Endereço"] = df["CEP"].map(enderecos)
     
     # Formatar as colunas de Latitude e Longitude para 6 casas decimais
     df["Latitude"] = df["Latitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
