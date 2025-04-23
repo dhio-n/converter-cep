@@ -33,6 +33,7 @@ def buscar_lat_lng(cep):
 def process_ceps(file):
     df = pd.read_excel(file)
     df.columns = df.columns.str.strip()
+    
     if "CEP" not in df.columns:
         st.error(f"❌ A coluna 'CEP' não foi encontrada no arquivo. Colunas encontradas: {', '.join(df.columns)}")
         st.stop()
@@ -43,12 +44,14 @@ def process_ceps(file):
 
     for cep in ceps:
         lat, lng = buscar_lat_lng(cep)
-        latitudes.append(lat)
-        longitudes.append(lng)
+        # Garantir que a latitude e longitude tenham 6 casas decimais
+        latitudes.append(round(lat, 6) if lat is not None else None)
+        longitudes.append(round(lng, 6) if lng is not None else None)
 
     df["Latitude"] = latitudes
     df["Longitude"] = longitudes
     return df
+
 
 def main():
     st.set_page_config(page_title="Conversor de CEP para Coordenadas", layout="centered")
