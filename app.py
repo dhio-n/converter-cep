@@ -49,8 +49,11 @@ if uploaded_file:
     if 'cep' not in df.columns:
         st.error("A planilha deve conter uma coluna chamada 'cep'.")
     else:
+        # Padronizar CEPs
+        df['cep'] = df['cep'].astype(str).str.replace("-", "").str.zfill(8)
+
         st.info("🔄 Processando CEPs únicos...")
-        ceps_unicos = df['cep'].astype(str).str.replace("-", "").str.zfill(8).unique()
+        ceps_unicos = df['cep'].unique()
 
         resultados = []
         for i, cep in enumerate(ceps_unicos, 1):
@@ -58,13 +61,17 @@ if uploaded_file:
             resultados.append({"cep": cep, "latitude": lat, "longitude": lon})
             st.write(f"✅ ({i}/{len(ceps_unicos)}) CEP: {cep} - Lat: {lat} | Lon: {lon}")
 
+        # Criar dataframe com resultados
         df_resultado = pd.DataFrame(resultados)
+        df_resultado["cep"] = df_resultado["cep"].astype(str).str.replace("-", "").str.zfill(8)
+
+        # Merge com o original
         df_final = df.merge(df_resultado, on="cep", how="left")
 
         st.success("✅ Conversão finalizada!")
         st.dataframe(df_final)
 
-        # Preparar download do Excel
+        # Download
         output = BytesIO()
         df_final.to_excel(output, index=False)
         st.download_button(
