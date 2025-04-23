@@ -3,17 +3,10 @@ import pandas as pd
 from brazilcep import get_address_from_cep, WebService
 import requests
 import io
+from database import *
 
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
-import streamlit as st
-from database import *
-from serial_generator import gerar_numero_serie
-from etiqueta import gerar_etiqueta_pdf
-from datetime import datetime, time
-import os
-import bcrypt
-import base64
 
 # =========================
 # FUNÇÕES DE AUTENTICAÇÃO
