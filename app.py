@@ -3,26 +3,27 @@ import pandas as pd
 import requests
 import time
 
-# Lê a chave da API diretamente dos secrets do Streamlit Cloud
-OPENCAGE_API_KEY = st.secrets["api_key"]
+# Substitua pela sua chave da API do Google Maps
+GOOGLE_API_KEY = st.secrets["google_api_key"]
 
-def buscar_lat_lon(cep):
+def buscar_lat_lon_google(cep, api_key):
     try:
-        # URL da API com o CEP e a chave
-        url = f"https://api.opencagedata.com/geocode/v1/json?q={cep},+Brazil&key={OPENCAGE_API_KEY}"
+        # Monta a URL para consulta na API do Google Geocoding
+        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={api_key}"
+        
+        # Realiza a requisição para a API
         response = requests.get(url)
         data = response.json()
 
-        # Verifica se há resultados válidos na resposta
-        if data["results"]:
-            lat = data["results"][0]["geometry"]["lat"]
-            lon = data["results"][0]["geometry"]["lng"]
+        # Verifica se a consulta foi bem-sucedida
+        if data['status'] == 'OK':
+            # Extrai as coordenadas (latitude e longitude)
+            lat = data['results'][0]['geometry']['location']['lat']
+            lon = data['results'][0]['geometry']['location']['lng']
             return lat, lon
         else:
-            # Caso não haja resultados, retorna None
             return None, None
     except Exception as e:
-        # Caso ocorra erro, retorna None e exibe a exceção
         st.error(f"Erro ao consultar o CEP {cep}: {e}")
         return None, None
 
@@ -36,7 +37,7 @@ arquivo = st.file_uploader("Envie sua planilha XLSX com a coluna 'cep'", type=["
 if arquivo:
     df = pd.read_excel(arquivo)
 
-    # Verifica se a coluna 'cep' está presente
+    # Verifica se a coluna 'cep' está presente na planilha
     if 'cep' not in df.columns:
         st.error("A planilha precisa conter uma coluna chamada 'cep'.")
     else:
@@ -49,10 +50,11 @@ if arquivo:
         ceps_unicos = df['cep'].unique()
         coord_dict = {}
 
+        # Faz a consulta de coordenadas para cada CEP único
         for cep in ceps_unicos:
-            lat, lon = buscar_lat_lon(cep)
+            lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
             coord_dict[cep] = (lat, lon)
-            time.sleep(1.1)  # Evita atingir o limite da API
+            time.sleep(1.1)  # Evita atingir o limite de requisições da API
 
         # Aplica as coordenadas no DataFrame original
         df['latitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[0])
@@ -61,8 +63,8 @@ if arquivo:
         st.success("Processamento concluído com sucesso!")
         st.dataframe(df)
 
-        # Exporta planilha com coordenadas
-        output_file = "ceps_com_coordenadas.xlsx"
+        # Exporta a planilha com coordenadas
+        output_file = "ceps_com_coordenadas_google.xlsx"
         df.to_excel(output_file, index=False)
 
         with open(output_file, "rb") as f:
