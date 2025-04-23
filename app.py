@@ -24,8 +24,10 @@ def consultar_endereco(cep):
         endereco = brazilcep.get_address_from_cep(cep)
         # Montando o endereço completo
         endereco_str = f"{endereco['street']}, {endereco['district']}, {endereco['city']}, {endereco['uf']}, {endereco['cep']}, Brasil"
+        st.write(f"Endereço gerado: {endereco_str}")  # Adicionando log para depuração
         return endereco_str
-    except:
+    except Exception as e:
+        st.error(f"Erro ao consultar o endereço: {e}")
         return "-"
 
 # Função para converter CEP em coordenadas
@@ -36,10 +38,13 @@ def cep_para_coordenadas(cep):
     try:
         location = geolocator.geocode(endereco)
         if location:
+            st.write(f"Localização encontrada: Lat: {location.latitude}, Lon: {location.longitude}")  # Log de localização
             return location.latitude, location.longitude
         else:
+            st.write(f"Nenhuma localização encontrada para o endereço: {endereco}")  # Log para erro de geocodificação
             return None, None
-    except:
+    except Exception as e:
+        st.error(f"Erro na geocodificação: {e}")
         return None, None
 
 # Upload do arquivo Excel
