@@ -4,7 +4,8 @@ from brazilcep import get_address_from_cep, WebService
 import requests
 import io
 
-GOOGLE_API_KEY = "SUA_API_KEY_AQUI"  # 🔑 Substitua pela sua chave de API
+GOOGLE_API_KEY = st.secrets["google_api_key"]
+
 
 def buscar_endereco_google(cep):
     url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={GOOGLE_API_KEY}"
