@@ -1,103 +1,93 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 import brazilcep
-from geopy.geocoders import Nominatim
 import requests
-import urllib3
-from urllib3.exceptions import InsecureRequestWarning
+import time
 from io import BytesIO
 
-# Desativar avisos de SSL
-urllib3.disable_warnings(InsecureRequestWarning)
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+def get_coordinates_from_address(address, max_retries=3, wait_seconds=2):
+    base_url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        "q": address,
+        "format": "json",
+        "limit": 1
+    }
 
-# Configurações iniciais
-st.set_page_config(page_title="Conversor de CEPs", layout="centered")
-st.title("📍 Conversor de CEPs para Latitude/Longitude")
+    headers = {
+        "User-Agent": "CEP-Geocoder/1.0 (contato@seudominio.com)"
+    }
 
-# Geolocalizador
-geolocator = Nominatim(user_agent="app_streamlit_cep")
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(base_url, params=params, headers=headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            if data:
+                return data[0]["lat"], data[0]["lon"]
+            else:
+                return None, None
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ Tentativa {attempt+1}/{max_retries} falhou para '{address}': {e}")
+            if attempt < max_retries - 1:
+                time.sleep(wait_seconds)
+            else:
+                return None, None
 
-# Função para obter endereço a partir do CEP
-def consultar_endereco(cep):
-    try:
-        endereco = brazilcep.get_address_from_cep(cep)
-        st.write(f"📦 Dados brutos do CEP {cep}: {endereco}")  # Log para depuração
+def process_ceps(file):
+    df = pd.read_excel(file)
+    ceps = df["CEP"].astype(str)
 
-        # Campos com fallback vazio
-        street = endereco.get('street') or ''
-        district = endereco.get('district') or ''
-        city = endereco.get('city') or ''
-        uf = endereco.get('uf') or ''
-        cep_str = endereco.get('cep') or ''
+    resultado = []
+    for i, cep in enumerate(ceps, start=1):
+        try:
+            address_info = brazilcep.get_address_from_cep(cep)
+            address_str = f"{address_info['street']}, {address_info['district']}, {address_info['city']}, {address_info['uf']}, {address_info['cep']}, Brasil"
+            lat, lon = get_coordinates_from_address(address_str)
 
-        # Validar campos mínimos para geocodificação
-        if not city or not uf:
-            st.warning(f"⚠️ Endereço incompleto para o CEP {cep}. Cidade ou estado ausentes.")
-            return "-"
+            resultado.append({
+                "CEP": cep,
+                "Endereço": address_str,
+                "Latitude": lat,
+                "Longitude": lon
+            })
+            print(f"📌 ({i}/{len(ceps)}) CEP: {cep} - Lat: {lat} | Lon: {lon}")
 
-        # Monta o endereço completo
-        endereco_str = f"{street}, {district}, {city}, {uf}, {cep_str}, Brasil"
-        st.write(f"📍 Endereço gerado: {endereco_str}")
-        return endereco_str
-    except Exception as e:
-        st.error(f"❌ Erro ao consultar o endereço para o CEP {cep}: {e}")
-        return "-"
+        except Exception as e:
+            print(f"❌ Erro ao processar o CEP {cep}: {e}")
+            resultado.append({
+                "CEP": cep,
+                "Endereço": "Erro ao buscar endereço",
+                "Latitude": None,
+                "Longitude": None
+            })
 
-# Função para converter CEP em coordenadas
-def cep_para_coordenadas(cep):
-    endereco = consultar_endereco(cep)
-    if endereco == "-":
-        return None, None
-    try:
-        location = geolocator.geocode(endereco)
-        if location:
-            st.write(f"✅ Localização: {location.latitude}, {location.longitude}")
-            return location.latitude, location.longitude
-        else:
-            st.warning(f"❌ Nenhuma localização encontrada para o endereço: {endereco}")
-            return None, None
-    except Exception as e:
-        st.error(f"❌ Erro na geocodificação para o CEP {cep}: {e}")
-        return None, None
+    return pd.DataFrame(resultado)
 
-# Upload do arquivo Excel
-uploaded_file = st.file_uploader("📤 Carregue sua planilha com uma coluna chamada 'cep'", type=["xlsx"])
+# Streamlit App
+st.set_page_config(page_title="Geocodificador de CEPs", layout="centered")
+st.title("📍 Geocodificador de CEPs com Latitude e Longitude")
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+st.markdown("""
+Envie um arquivo `.xlsx` com uma **coluna chamada `CEP`**. O sistema vai buscar o endereço, latitude e longitude de cada CEP.
+""")
 
-    if 'cep' not in df.columns:
-        st.error("❌ A planilha deve conter uma coluna chamada 'cep'.")
-    else:
-        # Padronizar CEPs
-        df['cep'] = df['cep'].astype(str).str.replace("-", "").str.zfill(8)
+file = st.file_uploader("📤 Enviar arquivo Excel", type=["xlsx"])
 
-        st.info("🔄 Processando CEPs únicos...")
-        ceps_unicos = df['cep'].unique()
+if file:
+    with st.spinner("🔄 Processando os CEPs..."):
+        df_resultado = process_ceps(file)
 
-        resultados = []
-        for i, cep in enumerate(ceps_unicos, 1):
-            lat, lon = cep_para_coordenadas(cep)
-            resultados.append({"cep": cep, "latitude": lat, "longitude": lon})
-            st.write(f"📌 ({i}/{len(ceps_unicos)}) CEP: {cep} - Lat: {lat} | Lon: {lon}")
+    st.success("✅ Processamento concluído!")
+    st.dataframe(df_resultado)
 
-        # Criar dataframe com resultados
-        df_resultado = pd.DataFrame(resultados)
-        df_resultado["cep"] = df_resultado["cep"].astype(str).str.replace("-", "").str.zfill(8)
+    # Geração do arquivo para download
+    output = BytesIO()
+    df_resultado.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
 
-        # Merge com o original
-        df_final = df.merge(df_resultado, on="cep", how="left")
-
-        st.success("✅ Conversão finalizada!")
-        st.dataframe(df_final)
-
-        # Download
-        output = BytesIO()
-        df_final.to_excel(output, index=False)
-        st.download_button(
-            label="📥 Baixar resultado como Excel",
-            data=output.getvalue(),
-            file_name="ceps_com_coordenadas.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    st.download_button(
+        label="📥 Baixar resultado em Excel",
+        data=output,
+        file_name="ceps_geocodificados.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
