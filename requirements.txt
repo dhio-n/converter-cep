@@ -1,4 +1,7 @@
 streamlit
 pandas
 openpyxl
+pycep_correios
+photon
+urllib3
 requests
