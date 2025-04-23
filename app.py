@@ -1,20 +1,24 @@
 import streamlit as st
 import pandas as pd
 import brazilcep
-from photon import geocode
+from geopy.geocoders import Nominatim
 import requests
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
+from io import BytesIO
 
-# Desativar warnings de SSL
+# Desativar avisos de SSL
 urllib3.disable_warnings(InsecureRequestWarning)
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+# Configurações iniciais
 st.set_page_config(page_title="Conversor de CEPs", layout="centered")
 st.title("📍 Conversor de CEPs para Latitude/Longitude")
 
-uploaded_file = st.file_uploader("📤 Carregue sua planilha com uma coluna chamada 'cep'", type=["xlsx"])
+# Geolocalizador
+geolocator = Nominatim(user_agent="app_streamlit_cep")
 
+# Função para obter endereço a partir do CEP
 def consultar_endereco(cep):
     try:
         endereco = brazilcep.get_address_from_cep(cep)
@@ -22,14 +26,22 @@ def consultar_endereco(cep):
     except:
         return "-"
 
+# Função para converter CEP em coordenadas
 def cep_para_coordenadas(cep):
     endereco = consultar_endereco(cep)
     if endereco == "-":
         return None, None
-    resultado = geocode(endereco, limit=1)
-    if resultado.empty:
+    try:
+        location = geolocator.geocode(endereco)
+        if location:
+            return location.latitude, location.longitude
+        else:
+            return None, None
+    except:
         return None, None
-    return resultado.lat[0], resultado.lon[0]
+
+# Upload do arquivo Excel
+uploaded_file = st.file_uploader("📤 Carregue sua planilha com uma coluna chamada 'cep'", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
@@ -52,10 +64,12 @@ if uploaded_file:
         st.success("✅ Conversão finalizada!")
         st.dataframe(df_final)
 
-        # Download da planilha com coordenadas
+        # Preparar download do Excel
+        output = BytesIO()
+        df_final.to_excel(output, index=False)
         st.download_button(
             label="📥 Baixar resultado como Excel",
-            data=df_final.to_excel(index=False),
+            data=output.getvalue(),
             file_name="ceps_com_coordenadas.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
