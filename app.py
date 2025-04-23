@@ -6,29 +6,29 @@ import io
 
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
-
-def buscar_endereco_google(cep):
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={GOOGLE_API_KEY}"
+def buscar_endereco_google(endereco_completo):
+    # Consulta a API do Google para obter latitude, longitude e endereço completo a partir do endereço
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={endereco_completo},Brazil&key={GOOGLE_API_KEY}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         if data["results"]:
             location = data["results"][0]["geometry"]["location"]
-            return location["lat"], location["lng"]
+            latitude = location["lat"]
+            longitude = location["lng"]
+            return latitude, longitude
     return None, None
 
-def buscar_lat_lng(cep):
+def buscar_endereco_brasil_cep(cep):
+    # Utiliza o BrasilCEP apenas para obter o endereço completo
     try:
         endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
-        if endereco is None:
-            raise ValueError("CEP não encontrado na primeira tentativa")
-        latitude = endereco.get("latitude")
-        longitude = endereco.get("longitude")
-        if latitude and longitude:
-            return latitude, longitude
-    except:
-        pass
-    return buscar_endereco_google(cep)
+        if endereco:
+            endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
+            return endereco_completo
+    except Exception as e:
+        st.error(f"Erro ao buscar endereço no BrasilCEP: {str(e)}")
+    return "Endereço não encontrado"
 
 def process_ceps(file):
     df = pd.read_excel(file)
@@ -43,24 +43,21 @@ def process_ceps(file):
     longitudes = []
     enderecos = {}
 
-    # Criar um dicionário de endereços
+    # Criar um dicionário de endereços utilizando o BrasilCEP
     for cep in ceps:
-        try:
-            endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
-            if endereco and 'logradouro' in endereco:
-                endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
-                enderecos[cep] = endereco_completo
-            else:
-                enderecos[cep] = "Endereço não encontrado"
-        except Exception as e:
-            enderecos[cep] = f"Erro ao consultar: {str(e)}"
+        endereco_completo = buscar_endereco_brasil_cep(cep)
+        enderecos[cep] = endereco_completo
 
-    # Agora vamos processar as latitudes e longitudes
+    # Agora vamos processar as latitudes e longitudes com o Google, utilizando o endereço completo
     for cep in ceps:
-        lat, lng = buscar_lat_lng(cep)
-        # Garantir que a latitude e longitude tenham 6 casas decimais
-        latitudes.append(round(lat, 6) if lat is not None else None)
-        longitudes.append(round(lng, 6) if lng is not None else None)
+        endereco_completo = enderecos[cep]
+        lat, lng = buscar_endereco_google(endereco_completo)
+        if lat is not None and lng is not None:
+            latitudes.append(round(lat, 6))
+            longitudes.append(round(lng, 6))
+        else:
+            latitudes.append(None)
+            longitudes.append(None)
 
     # Adicionar as colunas de Latitude, Longitude e Endereço ao DataFrame
     df["Latitude"] = latitudes
@@ -72,8 +69,6 @@ def process_ceps(file):
     df["Longitude"] = df["Longitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
     
     return df
-
-
 
 def main():
     st.set_page_config(page_title="Conversor de CEP para Coordenadas", layout="centered")
