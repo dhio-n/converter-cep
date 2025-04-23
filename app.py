@@ -6,6 +6,71 @@ import io
 
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
+import streamlit as st
+from database import *
+from serial_generator import gerar_numero_serie
+from etiqueta import gerar_etiqueta_pdf
+from datetime import datetime, time
+import os
+import bcrypt
+import base64
+
+# =========================
+# FUNÇÕES DE AUTENTICAÇÃO
+# =========================
+def verificar_login(usuario, senha):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT senha FROM usuarios WHERE usuario = %s", (usuario,))
+    resultado = cursor.fetchone()
+    conn.close()
+
+    if resultado:
+        senha_hash = resultado["senha"]
+        return bcrypt.checkpw(senha.encode(), senha_hash.encode())
+    return False
+
+# =========================
+# TELA DE LOGIN
+# =========================
+def tela_login():
+    caminho_logo = os.path.join(os.path.dirname(__file__), "LOGO2.png")
+
+    if os.path.exists(caminho_logo):
+        with open(caminho_logo, "rb") as image_file:
+            encoded_logo = base64.b64encode(image_file.read()).decode()
+        st.markdown(f"""
+            <style>
+                .stApp {{
+                    background-image: url("data:image/png;base64,{encoded_logo}");
+                    background-size: cover;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                }}
+                .block-container {{
+                    background-color: rgba(255, 255, 255, 0.85);
+                    padding: 2rem;
+                    border-radius: 10px;
+                    max-width: 400px;
+                    margin: auto;
+                    margin-top: 100px;
+                }}
+            </style>
+        """, unsafe_allow_html=True)
+
+    st.subheader("🔐 Gerador de número de série - Mundial Refrigeração - Login")
+    usuario = st.text_input("Usuário", key="login_usuario")
+    senha = st.text_input("Senha", type="password", key="login_senha")
+
+    if st.button("Entrar"):
+        if verificar_login(usuario, senha):
+            st.session_state.logado = True
+            st.session_state.usuario = usuario
+            st.success("✅ Login realizado com sucesso!")
+            st.rerun()
+        else:
+            st.error("❌ Usuário ou senha incorretos.")
+
 def buscar_endereco_google(endereco_completo):
     # Consulta a API do Google para obter latitude, longitude e endereço completo a partir do endereço
     url = f"https://maps.googleapis.com/maps/api/geocode/json?address={endereco_completo},Brazil&key={GOOGLE_API_KEY}"
