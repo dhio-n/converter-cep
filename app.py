@@ -43,10 +43,15 @@ def process_ceps(file):
     longitudes = []
     enderecos = {}
 
+    st.markdown("### 🔍 Processando CEPs:")
+
     # Criar um dicionário de endereços utilizando o BrasilCEP
     for cep in ceps:
         endereco_completo = buscar_endereco_brasil_cep(cep)
         enderecos[cep] = endereco_completo
+
+        # Imprimir na tela o endereço retornado para cada CEP
+        st.markdown(f"✅ **{cep}** → `{endereco_completo}`")
 
     # Agora vamos processar as latitudes e longitudes com o Google, utilizando o endereço completo
     for cep in ceps:
@@ -69,6 +74,7 @@ def process_ceps(file):
     df["Longitude"] = df["Longitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
     
     return df
+
 
 def main():
     st.set_page_config(page_title="Conversor de CEP para Coordenadas", layout="centered")
