@@ -48,7 +48,7 @@ def process_ceps(file):
     # Criar um dicionário de endereços utilizando o BrasilCEP
     for cep in ceps:
         endereco_completo = buscar_endereco_brasil_cep(cep)
-        enderecos[cep] = endereco_completo
+        enderecos[cep] = endereco_completo.values()
 
         # Imprimir na tela o endereço retornado para cada CEP
         st.markdown(f"✅ **{cep}** → `{endereco_completo}`")
