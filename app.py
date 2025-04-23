@@ -22,8 +22,10 @@ def buscar_lat_lon_google(cep, api_key):
             lon = data['results'][0]['geometry']['location']['lng']
             return lat, lon
         else:
+            # Retorna None se não encontrar resultados
             return None, None
     except Exception as e:
+        # Captura qualquer exceção e exibe erro no Streamlit
         st.error(f"Erro ao consultar o CEP {cep}: {e}")
         return None, None
 
@@ -46,15 +48,16 @@ if arquivo:
         # Limpa os CEPs, garantindo que sejam 8 dígitos
         df['cep'] = df['cep'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(8)
 
-        # Consulta apenas CEPs únicos
-        ceps_unicos = df['cep'].unique()
+        # Inicializa o dicionário de coordenadas
         coord_dict = {}
 
         # Faz a consulta de coordenadas para cada CEP único
-        for cep in ceps_unicos:
-            lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
-            coord_dict[cep] = (lat, lon)
-            time.sleep(1.1)  # Evita atingir o limite de requisições da API
+        for cep in df['cep']:
+            # Verifica se já foi consultado anteriormente
+            if cep not in coord_dict:
+                lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
+                coord_dict[cep] = (lat, lon)
+                time.sleep(1.1)  # Evita atingir o limite de requisições da API
 
         # Aplica as coordenadas no DataFrame original
         df['latitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[0])
