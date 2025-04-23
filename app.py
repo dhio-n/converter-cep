@@ -1,92 +1,64 @@
 import streamlit as st
 import pandas as pd
+from pycep_correios import get_address_from_cep, WebService, exceptions
+from urllib3.exceptions import InsecureRequestWarning
+import urllib3
 import requests
-import time
+from photon import geocode
 
-# Substitua pela sua chave da API do Distancematrix
-API_KEY = st.secrets["api_key"]
+# Desativar warnings SSL
+urllib3.disable_warnings(InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-def buscar_lat_lon_distancematrix(cep, api_key):
-    time.sleep(1.5)  # Atraso para evitar problemas de cache
-    try:
-        # Monta a URL para consulta na API Distancematrix
-        url = f'https://api-v2.distancematrix.ai/maps/api/geocode/json?address={cep}&key={api_key}'
-
-        # Realiza a requisição para a API
-        response = requests.get(url)
-        data = response.json()
-
-        # Verifica se a consulta foi bem-sucedida
-        if data['status'] == 'OK':
-            # Extrai as coordenadas (latitude e longitude)
-            lat = data['results'][0]['geometry']['location']['lat']
-            lon = data['results'][0]['geometry']['location']['lng']
-
-            # Exibe o CEP e as coordenadas na tela para depuração
-            st.write(f"CEP: {cep}, Latitude: {lat}, Longitude: {lon}")
-
-            return lat, lon
-        else:
-            # Exibe o status da API se houver um erro
-            st.write(f"Erro na API para o CEP {cep}: {data['status']}")
-            return None, None
-    except Exception as e:
-        # Captura qualquer exceção e exibe erro no Streamlit
-        st.error(f"Erro ao consultar o CEP {cep}: {e}")
-        return None, None
-
-# Streamlit UI
 st.set_page_config(page_title="Conversor de CEPs", layout="centered")
-st.title("📍 Conversor de CEPs para Latitude e Longitude")
+st.title("🔍 Conversor de CEP para Latitude/Longitude")
 
-# Upload de arquivo
-arquivo = st.file_uploader("Envie sua planilha XLSX com a coluna 'cep'", type=["xlsx"])
+uploaded_file = st.file_uploader("📤 Carregue sua planilha com CEPs (.xlsx)", type=["xlsx"])
 
-if arquivo:
-    df = pd.read_excel(arquivo)
+def consultar_endereco(cep):
+    try:
+        endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
+        return f"{endereco['logradouro']} {endereco['cidade']} Brasil"
+    except exceptions.BaseException:
+        return "-"
 
-    # Verifica se a coluna 'cep' está presente na planilha
+def cep_para_coordenadas(cep):
+    endereco = consultar_endereco(cep)
+    if endereco == "-":
+        return None, None
+    resultado = geocode(endereco, limit=1)
+    if resultado.empty:
+        return None, None
+    return resultado.lat[0], resultado.lon[0]
+
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
+    
+    # Garantir que a coluna se chame 'cep' (ou ajustar)
     if 'cep' not in df.columns:
-        st.error("A planilha precisa conter uma coluna chamada 'cep'.")
+        st.error("A planilha deve conter uma coluna chamada 'cep'.")
     else:
-        st.info("Processando os CEPs... isso pode levar alguns segundos.")
-
-        # Limpa os CEPs, garantindo que sejam 8 dígitos
-        df['cep'] = df['cep'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(8)
-
-        # Obtém a lista de CEPs únicos
-        ceps_unicos = df['cep'].unique()
-
-        # Inicializa listas para latitude e longitude
-        latitudes = []
-        longitudes = []
-
-        # Faz a consulta de coordenadas para cada CEP único
-        for cep in ceps_unicos:
-            lat, lon = buscar_lat_lon_distancematrix(cep, API_KEY)
-            if lat and lon:  # Verifica se as coordenadas foram retornadas corretamente
-                latitudes.append(lat)
-                longitudes.append(lon)
-            else:
-                # Se não conseguir pegar a latitude/longitude, adiciona valores nulos
-                latitudes.append(None)
-                longitudes.append(None)
-
-            # Exibe na tela o CEP sendo processado
-            st.write(f'CEP: {cep}, Latitude: {lat}, Longitude: {lon}')
-
-        # Cria um DataFrame com os CEPs únicos e suas coordenadas
-        df_coords = pd.DataFrame({'cep': ceps_unicos, 'latitude': latitudes, 'longitude': longitudes})
-
-        # Mescla as coordenadas com o DataFrame original
-        df = pd.merge(df, df_coords, on='cep', how='left')
-
-        st.success("Processamento concluído com sucesso!")
-        st.dataframe(df)
-
-        # Exporta a planilha com coordenadas
-        output_file = "ceps_com_coordenadas_distancematrix.xlsx"
-        df.to_excel(output_file, index=False)
-
-        with open(output_file, "rb") as f:
-            st.download_button("Baixar planilha com coordenadas", f, file_name=output_file)
+        st.info("🔄 Processando CEPs únicos...")
+        ceps_unicos = df['cep'].astype(str).str.replace("-", "").str.zfill(8).unique()
+        
+        resultados = []
+        for i, cep in enumerate(ceps_unicos, 1):
+            lat, lon = cep_para_coordenadas(cep)
+            resultados.append({"cep": cep, "latitude": lat, "longitude": lon})
+            st.write(f"✅ ({i}/{len(ceps_unicos)}) CEP: {cep} - Lat: {lat} | Lon: {lon}")
+        
+        df_resultado = pd.DataFrame(resultados)
+        
+        # Merge com o original para manter os dados completos
+        df_final = df.merge(df_resultado, on="cep", how="left")
+        
+        st.success("✅ Conversão finalizada!")
+        st.dataframe(df_final)
+        
+        # Baixar resultado
+        st.download_button(
+            label="📥 Baixar resultado como Excel",
+            data=df_final.to_excel(index=False),
+            file_name="ceps_com_coordenadas.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
