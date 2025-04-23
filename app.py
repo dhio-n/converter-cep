@@ -24,7 +24,8 @@ def buscar_endereco_brasil_cep(cep):
     try:
         endereco = get_address_from_cep(cep)
         if endereco:
-            endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
+           endereco_completo = f"{endereco.get('street', '')}, {endereco.get('district', '')}, {endereco.get('city', '')}, {endereco.get('uf', '')}"
+
             return endereco_completo
     except Exception as e:
         st.error(f"Erro ao buscar endereço no BrasilCEP: {str(e)}")
