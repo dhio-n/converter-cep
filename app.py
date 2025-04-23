@@ -39,41 +39,34 @@ def process_ceps(file):
         st.error(f"❌ A coluna 'CEP' não foi encontrada no arquivo. Colunas encontradas: {', '.join(df.columns)}")
         st.stop()
 
-    ceps = df["CEP"].astype(str)
+    # Normaliza os CEPs: remove espaços e garante formato com hífen
+    df["CEP"] = df["CEP"].astype(str).str.strip().str.replace(r"[^\d]", "", regex=True).str.zfill(8)
+    ceps_formatados = df["CEP"].apply(lambda x: f"{x[:5]}-{x[5:]}")
+    
     latitudes = []
     longitudes = []
     enderecos = {}
 
     st.markdown("### 🔍 Processando CEPs:")
 
-    # Criar um dicionário de endereços utilizando o BrasilCEP
-    for cep in ceps:
+    for cep in ceps_formatados:
         endereco_completo = buscar_endereco_brasil_cep(cep)
         enderecos[cep] = endereco_completo
-
-        # Imprimir na tela o endereço retornado para cada CEP
         st.markdown(f"✅ **{cep}** → `{endereco_completo}`")
 
-    # Agora vamos processar as latitudes e longitudes com o Google, utilizando o endereço completo
-    for cep in ceps:
+    for cep in ceps_formatados:
         endereco_completo = enderecos[cep]
         lat, lng = buscar_endereco_google(endereco_completo)
-        if lat is not None and lng is not None:
-            latitudes.append(round(lat, 6))
-            longitudes.append(round(lng, 6))
-        else:
-            latitudes.append(None)
-            longitudes.append(None)
+        latitudes.append(round(lat, 6) if lat is not None else None)
+        longitudes.append(round(lng, 6) if lng is not None else None)
 
-    # Adicionar as colunas de Latitude, Longitude e Endereço ao DataFrame
     df["Latitude"] = latitudes
     df["Longitude"] = longitudes
-    df["Endereço"] = df["CEP"].map(enderecos)
-    
-    # Formatar as colunas de Latitude e Longitude para 6 casas decimais
+    df["Endereço"] = ceps_formatados.map(enderecos)
+
     df["Latitude"] = df["Latitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
     df["Longitude"] = df["Longitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
-    
+
     return df
 
 
