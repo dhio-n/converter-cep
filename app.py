@@ -22,12 +22,26 @@ geolocator = Nominatim(user_agent="app_streamlit_cep")
 def consultar_endereco(cep):
     try:
         endereco = brazilcep.get_address_from_cep(cep)
-        # Montando o endereço completo
-        endereco_str = f"{endereco['street']}, {endereco['district']}, {endereco['city']}, {endereco['uf']}, {endereco['cep']}, Brasil"
-        st.write(f"Endereço gerado: {endereco_str}")  # Adicionando log para depuração
+        st.write(f"📦 Dados brutos do CEP {cep}: {endereco}")  # Log para depuração
+
+        # Campos com fallback vazio
+        street = endereco.get('street') or ''
+        district = endereco.get('district') or ''
+        city = endereco.get('city') or ''
+        uf = endereco.get('uf') or ''
+        cep_str = endereco.get('cep') or ''
+
+        # Validar campos mínimos para geocodificação
+        if not city or not uf:
+            st.warning(f"⚠️ Endereço incompleto para o CEP {cep}. Cidade ou estado ausentes.")
+            return "-"
+
+        # Monta o endereço completo
+        endereco_str = f"{street}, {district}, {city}, {uf}, {cep_str}, Brasil"
+        st.write(f"📍 Endereço gerado: {endereco_str}")
         return endereco_str
     except Exception as e:
-        st.error(f"Erro ao consultar o endereço: {e}")
+        st.error(f"❌ Erro ao consultar o endereço para o CEP {cep}: {e}")
         return "-"
 
 # Função para converter CEP em coordenadas
@@ -38,13 +52,13 @@ def cep_para_coordenadas(cep):
     try:
         location = geolocator.geocode(endereco)
         if location:
-            st.write(f"Localização encontrada: Lat: {location.latitude}, Lon: {location.longitude}")  # Log de localização
+            st.write(f"✅ Localização: {location.latitude}, {location.longitude}")
             return location.latitude, location.longitude
         else:
-            st.write(f"Nenhuma localização encontrada para o endereço: {endereco}")  # Log para erro de geocodificação
+            st.warning(f"❌ Nenhuma localização encontrada para o endereço: {endereco}")
             return None, None
     except Exception as e:
-        st.error(f"Erro na geocodificação: {e}")
+        st.error(f"❌ Erro na geocodificação para o CEP {cep}: {e}")
         return None, None
 
 # Upload do arquivo Excel
@@ -54,7 +68,7 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
     if 'cep' not in df.columns:
-        st.error("A planilha deve conter uma coluna chamada 'cep'.")
+        st.error("❌ A planilha deve conter uma coluna chamada 'cep'.")
     else:
         # Padronizar CEPs
         df['cep'] = df['cep'].astype(str).str.replace("-", "").str.zfill(8)
@@ -66,7 +80,7 @@ if uploaded_file:
         for i, cep in enumerate(ceps_unicos, 1):
             lat, lon = cep_para_coordenadas(cep)
             resultados.append({"cep": cep, "latitude": lat, "longitude": lon})
-            st.write(f"✅ ({i}/{len(ceps_unicos)}) CEP: {cep} - Lat: {lat} | Lon: {lon}")
+            st.write(f"📌 ({i}/{len(ceps_unicos)}) CEP: {cep} - Lat: {lat} | Lon: {lon}")
 
         # Criar dataframe com resultados
         df_resultado = pd.DataFrame(resultados)
