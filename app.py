@@ -50,7 +50,13 @@ def process_ceps(file):
 
     df["Latitude"] = latitudes
     df["Longitude"] = longitudes
+    
+    # Formatar as colunas de Latitude e Longitude para 6 casas decimais
+    df["Latitude"] = df["Latitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
+    df["Longitude"] = df["Longitude"].apply(lambda x: f"{x:.6f}" if x is not None else None)
+    
     return df
+
 
 
 def main():
