@@ -66,6 +66,7 @@ if arquivo:
             lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
             latitudes.append(lat)
             longitudes.append(lon)
+            st.write(f'cep: {cep},latitude: {lat}, longitude{lon}')
 
         # Cria um DataFrame com os CEPs únicos e suas coordenadas
         df_coords = pd.DataFrame({'cep': ceps_unicos, 'latitude': latitudes, 'longitude': longitudes})
