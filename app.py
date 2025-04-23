@@ -47,10 +47,13 @@ def process_ceps(file):
     for cep in ceps:
         try:
             endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
-            endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
-            enderecos[cep] = endereco_completo
-        except:
-            enderecos[cep] = "Endereço não encontrado"
+            if endereco and 'logradouro' in endereco:
+                endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('localidade', '')}, {endereco.get('uf', '')}"
+                enderecos[cep] = endereco_completo
+            else:
+                enderecos[cep] = "Endereço não encontrado"
+        except Exception as e:
+            enderecos[cep] = f"Erro ao consultar: {str(e)}"
 
     # Agora vamos processar as latitudes e longitudes
     for cep in ceps:
