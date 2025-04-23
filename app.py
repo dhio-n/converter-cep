@@ -22,7 +22,9 @@ geolocator = Nominatim(user_agent="app_streamlit_cep")
 def consultar_endereco(cep):
     try:
         endereco = brazilcep.get_address_from_cep(cep)
-        return f"{endereco['street']} {endereco['city']} Brasil"
+        # Montando o endereço completo
+        endereco_str = f"{endereco['street']}, {endereco['district']}, {endereco['city']}, {endereco['uf']}, {endereco['cep']}, Brasil"
+        return endereco_str
     except:
         return "-"
 
