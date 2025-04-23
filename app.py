@@ -153,3 +153,31 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# =========================
+# INICIALIZA ESTADO DE SESSÃO
+# =========================
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+if "usuario" not in st.session_state:
+    st.session_state.usuario = ""
+if "reimprimir_serie" not in st.session_state:
+    st.session_state.reimprimir_serie = None
+
+# =========================
+# SE NÃO LOGADO, MOSTRA TELA DE LOGIN
+# =========================
+if not st.session_state.logado:
+    tela_login()
+    st.stop()
+
+# =========================
+# INTERFACE PRINCIPAL
+# =========================
+st.sidebar.markdown(f"👤 Logado como: **{st.session_state.usuario}**")
+logout = st.sidebar.button("Logout")
+if logout:
+    st.session_state.logado = False
+    st.session_state.usuario = ""
+    st.success("✅ Logout realizado com sucesso!")
+    st.stop()
