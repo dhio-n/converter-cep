@@ -6,6 +6,7 @@ import time
 # Substitua pela sua chave da API do Google Maps
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
+@st.cache_data
 def buscar_lat_lon_google(cep, api_key):
     try:
         # Monta a URL para consulta na API do Google Geocoding
@@ -48,16 +49,17 @@ if arquivo:
         # Limpa os CEPs, garantindo que sejam 8 dígitos
         df['cep'] = df['cep'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(8)
 
+        # Obtém a lista de CEPs únicos
+        ceps_unicos = df['cep'].unique()
+
         # Inicializa o dicionário de coordenadas
         coord_dict = {}
 
         # Faz a consulta de coordenadas para cada CEP único
-        for cep in df['cep']:
-            # Verifica se já foi consultado anteriormente
-            if cep not in coord_dict:
-                lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
-                coord_dict[cep] = (lat, lon)
-                time.sleep(1.1)  # Evita atingir o limite de requisições da API
+        for cep in ceps_unicos:
+            lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
+            coord_dict[cep] = (lat, lon)
+            time.sleep(1.1)  # Evita atingir o limite de requisições da API
 
         # Aplica as coordenadas no DataFrame original
         df['latitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[0])
@@ -71,4 +73,4 @@ if arquivo:
         df.to_excel(output_file, index=False)
 
         with open(output_file, "rb") as f:
-            st.download_button("📥 Baixar planilha com coordenadas", f, file_name=output_file)
+            st.download_button("Baixar planilha com coordenadas", f, file_name=output_file)
