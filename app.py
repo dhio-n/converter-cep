@@ -6,9 +6,9 @@ import io
 
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
-# Função para buscar a latitude e longitude usando a API do Google a partir do endereço
-def buscar_endereco_google(endereco):
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={endereco}&key={GOOGLE_API_KEY}"
+
+def buscar_endereco_google(cep):
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={GOOGLE_API_KEY}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
@@ -17,29 +17,19 @@ def buscar_endereco_google(endereco):
             return location["lat"], location["lng"]
     return None, None
 
-# Função para buscar o endereço usando o brazilcep
-def buscar_endereco_brazilcep(cep):
+def buscar_lat_lng(cep):
     try:
         endereco = get_address_from_cep(cep, webservice=WebService.APICEP)
         if endereco is None:
-            raise ValueError("CEP não encontrado")
-        
-        # Extraindo o endereço completo fornecido pelo brazilcep
-        endereco_completo = f"{endereco.get('logradouro', '')}, {endereco.get('bairro', '')}, {endereco.get('cidade', '')}, {endereco.get('uf', '')}, Brazil"
-        return endereco_completo
-    except Exception as e:
-        return None
+            raise ValueError("CEP não encontrado na primeira tentativa")
+        latitude = endereco.get("latitude")
+        longitude = endereco.get("longitude")
+        if latitude and longitude:
+            return latitude, longitude
+    except:
+        pass
+    return buscar_endereco_google(cep)
 
-# Função para buscar a latitude e longitude do CEP, passando pela API do Google após obter o endereço
-def buscar_lat_lng(cep):
-    endereco_completo = buscar_endereco_brazilcep(cep)
-    if endereco_completo:
-        # Buscando a latitude e longitude do endereço completo via API do Google
-        latitude, longitude = buscar_endereco_google(endereco_completo)
-        return latitude, longitude
-    return None, None
-
-# Função para processar o arquivo e adicionar as coordenadas
 def process_ceps(file):
     df = pd.read_excel(file)
     df.columns = df.columns.str.strip()
@@ -62,7 +52,7 @@ def process_ceps(file):
     df["Longitude"] = longitudes
     return df
 
-# Função principal do Streamlit
+
 def main():
     st.set_page_config(page_title="Conversor de CEP para Coordenadas", layout="centered")
     st.title("📍 Conversor de CEPs para Coordenadas")
