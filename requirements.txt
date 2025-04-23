@@ -5,3 +5,4 @@ brazilcep
 geopy
 urllib3
 requests
+XlsxWriter
