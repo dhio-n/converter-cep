@@ -145,6 +145,6 @@ Planilha `.xlsx` com a coluna `CEP`:
 
 ## 📮 Contato
 
-Desenvolvido por [Seu Nome]  
+Desenvolvido por Dhionatan Pereira Barbosa, aplicativo solicitado para resolver um processo de ETL por Rafael Loredo. 
 ✉️ Email: dhionatan.sh@gmail.com  
 🔗 LinkedIn: [linkedin.com/in/seuperfil]([https://linkedin.com/in/seuperfil](https://www.linkedin.com/in/dhionatanbarbosa/))
