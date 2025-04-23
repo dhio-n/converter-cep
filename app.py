@@ -11,7 +11,7 @@ def buscar_lat_lon_google(cep, api_key):
     try:
         # Monta a URL para consulta na API do Google Geocoding
         url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={api_key}"
-
+        
         # Realiza a requisição para a API
         response = requests.get(url)
         data = response.json()
@@ -22,7 +22,7 @@ def buscar_lat_lon_google(cep, api_key):
             lat = data['results'][0]['geometry']['location']['lat']
             lon = data['results'][0]['geometry']['location']['lng']
 
-            # Exibe o CEP e as coordenadas na tela
+            # Exibe o CEP e as coordenadas na tela para depuração
             st.write(f"CEP: {cep}, Latitude: {lat}, Longitude: {lon}")
 
             return lat, lon
@@ -64,9 +64,16 @@ if arquivo:
         # Faz a consulta de coordenadas para cada CEP único
         for cep in ceps_unicos:
             lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
-            latitudes.append(lat)
-            longitudes.append(lon)
-            st.write(f'cep: {cep},latitude: {lat}, longitude{lon}')
+            if lat and lon:  # Verifica se as coordenadas foram retornadas corretamente
+                latitudes.append(lat)
+                longitudes.append(lon)
+            else:
+                # Se não conseguir pegar a latitude/longitude, adiciona valores nulos
+                latitudes.append(None)
+                longitudes.append(None)
+
+            # Exibe na tela o CEP sendo processado
+            st.write(f'CEP: {cep}, Latitude: {lat}, Longitude: {lon}')
 
         # Cria um DataFrame com os CEPs únicos e suas coordenadas
         df_coords = pd.DataFrame({'cep': ceps_unicos, 'latitude': latitudes, 'longitude': longitudes})
