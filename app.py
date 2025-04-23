@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import time
 
-# Lê a chave da API diretamente dos secrets do Streamlit
+# Lê a chave da API diretamente dos secrets do Streamlit Cloud
 OPENCAGE_API_KEY = st.secrets["api_key"]
 
 def buscar_lat_lon(cep):
@@ -21,6 +21,7 @@ def buscar_lat_lon(cep):
     except:
         return None, None
 
+# Streamlit UI
 st.set_page_config(page_title="Conversor de CEPs", layout="centered")
 st.title("📍 Conversor de CEPs para Latitude e Longitude")
 
@@ -32,23 +33,24 @@ if arquivo:
     if 'cep' not in df.columns:
         st.error("A planilha precisa conter uma coluna chamada 'cep'.")
     else:
-        st.info("Processando os CEPs...")
-
+        st.info("Processando os CEPs... isso pode levar alguns segundos.")
+        
         df['cep'] = df['cep'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(8)
-        
-        latitudes = []
-        longitudes = []
-        
-        for cep in df['cep']:
+
+        # Consulta apenas CEPs únicos
+        ceps_unicos = df['cep'].unique()
+        coord_dict = {}
+
+        for cep in ceps_unicos:
             lat, lon = buscar_lat_lon(cep)
-            latitudes.append(lat)
-            longitudes.append(lon)
-            time.sleep(1.1)  # Respeita limites da API gratuita
+            coord_dict[cep] = (lat, lon)
+            time.sleep(1.1)  # Evita atingir o limite da API
 
-        df['latitude'] = latitudes
-        df['longitude'] = longitudes
+        # Aplica as coordenadas no DataFrame original
+        df['latitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[0])
+        df['longitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[1])
 
-        st.success("Processamento concluído!")
+        st.success("Processamento concluído com sucesso!")
         st.dataframe(df)
 
         # Exporta planilha com coordenadas
