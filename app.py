@@ -6,13 +6,12 @@ import time
 # Substitua pela sua chave da API do Google Maps
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
-@st.cache_data
 def buscar_lat_lon_google(cep, api_key):
-    time.sleep(0.5) # Add a delay before calling the API
+    time.sleep(1.5)  # Atraso mais longo para evitar problemas de cache
     try:
         # Monta a URL para consulta na API do Google Geocoding
         url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={api_key}"
-        
+
         # Realiza a requisição para a API
         response = requests.get(url)
         data = response.json()
@@ -46,24 +45,28 @@ if arquivo:
         st.error("A planilha precisa conter uma coluna chamada 'cep'.")
     else:
         st.info("Processando os CEPs... isso pode levar alguns segundos.")
-        
+
         # Limpa os CEPs, garantindo que sejam 8 dígitos
         df['cep'] = df['cep'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(8)
 
         # Obtém a lista de CEPs únicos
         ceps_unicos = df['cep'].unique()
 
-        # Inicializa o dicionário de coordenadas
-        coord_dict = {}
+        # Inicializa listas para latitude e longitude
+        latitudes = []
+        longitudes = []
 
         # Faz a consulta de coordenadas para cada CEP único
         for cep in ceps_unicos:
             lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
-            coord_dict[cep] = (lat, lon)
+            latitudes.append(lat)
+            longitudes.append(lon)
 
-        # Aplica as coordenadas no DataFrame original
-        df['latitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[0])
-        df['longitude'] = df['cep'].map(lambda x: coord_dict.get(x, (None, None))[1])
+        # Cria um DataFrame com os CEPs únicos e suas coordenadas
+        df_coords = pd.DataFrame({'cep': ceps_unicos, 'latitude': latitudes, 'longitude': longitudes})
+
+        # Mescla as coordenadas com o DataFrame original
+        df = pd.merge(df, df_coords, on='cep', how='left')
 
         st.success("Processamento concluído com sucesso!")
         st.dataframe(df)
