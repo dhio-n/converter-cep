@@ -6,3 +6,6 @@ geopy
 urllib3
 requests
 XlsxWriter
+psycopg2
+psycopg2.extras
+datetime
