@@ -7,7 +7,7 @@ import time
 GOOGLE_API_KEY = st.secrets["google_api_key"]
 
 def buscar_lat_lon_google(cep, api_key):
-    time.sleep(1.5)  # Atraso mais longo para evitar problemas de cache
+    time.sleep(1.5)  # Atraso para evitar problemas de cache
     try:
         # Monta a URL para consulta na API do Google Geocoding
         url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={api_key}"
@@ -21,9 +21,14 @@ def buscar_lat_lon_google(cep, api_key):
             # Extrai as coordenadas (latitude e longitude)
             lat = data['results'][0]['geometry']['location']['lat']
             lon = data['results'][0]['geometry']['location']['lng']
+
+            # Imprime o CEP e as coordenadas no console
+            print(f"CEP: {cep}, Latitude: {lat}, Longitude: {lon}")
+
             return lat, lon
         else:
-            # Retorna None se não encontrar resultados
+            # Imprime o status da API se houver um erro
+            print(f"Erro na API para o CEP {cep}: {data['status']}")
             return None, None
     except Exception as e:
         # Captura qualquer exceção e exibe erro no Streamlit
