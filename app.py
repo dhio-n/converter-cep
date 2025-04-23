@@ -3,15 +3,15 @@ import pandas as pd
 import requests
 import time
 
-# Substitua pela sua chave da API do Google Maps
-GOOGLE_API_KEY = st.secrets["google_api_key"]
+# Substitua pela sua chave da API do Distancematrix
+API_KEY = st.secrets["api_key"]
 
-def buscar_lat_lon_google(cep, api_key):
+def buscar_lat_lon_distancematrix(cep, api_key):
     time.sleep(1.5)  # Atraso para evitar problemas de cache
     try:
-        # Monta a URL para consulta na API do Google Geocoding
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={cep},Brazil&key={api_key}"
-        
+        # Monta a URL para consulta na API Distancematrix
+        url = f'https://api-v2.distancematrix.ai/maps/api/geocode/json?address={cep}&key={api_key}'
+
         # Realiza a requisição para a API
         response = requests.get(url)
         data = response.json()
@@ -63,7 +63,7 @@ if arquivo:
 
         # Faz a consulta de coordenadas para cada CEP único
         for cep in ceps_unicos:
-            lat, lon = buscar_lat_lon_google(cep, GOOGLE_API_KEY)
+            lat, lon = buscar_lat_lon_distancematrix(cep, API_KEY)
             if lat and lon:  # Verifica se as coordenadas foram retornadas corretamente
                 latitudes.append(lat)
                 longitudes.append(lon)
@@ -85,7 +85,7 @@ if arquivo:
         st.dataframe(df)
 
         # Exporta a planilha com coordenadas
-        output_file = "ceps_com_coordenadas_google.xlsx"
+        output_file = "ceps_com_coordenadas_distancematrix.xlsx"
         df.to_excel(output_file, index=False)
 
         with open(output_file, "rb") as f:
