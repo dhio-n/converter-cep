@@ -38,7 +38,7 @@ def tela_login():
             </style>
         """, unsafe_allow_html=True)
 
-    st.subheader("🔐 Gerador de número de série - Mundial Refrigeração - Login")
+    st.subheader("🔐 Conversor de CEP para coordenadas (latitude e longitude) - Mundial Refrigeração - Login")
     usuario = st.text_input("Usuário", key="login_usuario")
     senha = st.text_input("Senha", type="password", key="login_senha")
 
